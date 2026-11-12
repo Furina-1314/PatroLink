@@ -1,0 +1,311 @@
+{
+  "contract": "PatroLink 共享时间线日志（timeline.jsonl）字段契约",
+  "version": "0.1",
+  "updated": "2026-11-12",
+  "format": "JSONL：一行一个 JSON 对象，UTF-8 无 BOM，行尾 \\n",
+  "time_base": "Unix 毫秒时间戳（int，UTC），所有模块共用",
+  "events": ["episode_start", "tick", "episode_end"],
+  "required_by_event": {
+    "episode_start": ["schema_version", "event", "run_id", "ep_id", "t_ms"],
+    "tick": [
+      "schema_version", "event", "run_id", "ep_id", "t_ms",
+      "frame_id", "t_frame_ms", "confidence", "image_quality",
+      "infer_time_ms", "roi_ratio", "mode", "resolution",
+      "link_rtt_ms", "link_loss_rate",
+      "act_name", "act_params", "act_reason",
+      "exec_t_total_ms", "exec_bytes_up", "exec_success", "rw_total"
+    ],
+    "episode_end": ["schema_version", "event", "run_id", "ep_id", "t_ms"]
+  },
+  "fields": [
+    {
+      "name": "schema_version", "type": "string", "const": "0.1",
+      "group": "通用", "unit": "版本号", "required": true, "recommended": false,
+      "producer": "共同", "consumer": "校验脚本",
+      "desc": "契约版本；不兼容改动时升 0.2。校验脚本据此拒绝跨版本混写。"
+    },
+    {
+      "name": "event", "type": "string", "enum": ["episode_start", "tick", "episode_end"],
+      "group": "通用", "unit": "枚举", "required": true, "recommended": false,
+      "producer": "共同", "consumer": "面板 / 指标",
+      "desc": "事件类型。tick = 一次调度决策时刻，是日志的主体。"
+    },
+    {
+      "name": "run_id", "type": "string", "pattern": "^[A-Za-z0-9_.-]+$",
+      "group": "通用", "unit": "字符串", "required": true, "recommended": false,
+      "producer": "实验脚本", "consumer": "所有人",
+      "desc": "一次回合的唯一标识，约定命名 r{路线序号}_{场景}_{策略}_{种子}，如 r01_routeA_good_s1。"
+    },
+    {
+      "name": "ep_id", "type": "int", "min": 0,
+      "group": "通用", "unit": "整数", "required": true, "recommended": false,
+      "producer": "实验脚本", "consumer": "所有人",
+      "desc": "回合序号，从 0 或 1 开始均可，同一 run 内单调递增。"
+    },
+    {
+      "name": "t_ms", "type": "int", "min": 0,
+      "group": "通用", "unit": "Unix 毫秒", "required": true, "recommended": false,
+      "producer": "日志写入方", "consumer": "时间线对齐",
+      "desc": "本行日志的产生时刻（决策完成时刻）。不是帧采集时刻，也不是文件写入时刻。"
+    },
+    {
+      "name": "policy", "type": "string", "enum": ["B0", "B1", "B2", "Ours", "Oracle"],
+      "group": "通用", "unit": "枚举", "required": false, "recommended": true,
+      "producer": "实验脚本", "consumer": "指标 / 对照",
+      "desc": "只写在 episode_start 上。B0 固定基线 / B1 仅当前状态 / B2 预测+固定权重 / Ours 完整方案 / Oracle 已知未来（上界）。"
+    },
+    {
+      "name": "route", "type": "string", "enum": ["A", "B", "C"],
+      "group": "帧侧", "unit": "枚举", "required": false, "recommended": true,
+      "producer": "具身侧", "consumer": "指标 / 面板",
+      "desc": "采集路线：A 走廊 / B 实验室 / C 楼梯口。"
+    },
+    {
+      "name": "frame_id", "type": "int", "min": 0,
+      "group": "帧侧", "unit": "整数", "required": true, "recommended": false,
+      "producer": "具身侧", "consumer": "所有人",
+      "desc": "帧序号，同一 run 内单调递增；是帧表、缓存表、日志三者的关联主键。"
+    },
+    {
+      "name": "t_frame_ms", "type": "int", "min": 0,
+      "group": "帧侧", "unit": "Unix 毫秒", "required": true, "recommended": false,
+      "producer": "具身侧", "consumer": "时延 / 归因",
+      "desc": "该帧的采集时刻。端到端时延 = t_ms − t_frame_ms。"
+    },
+    {
+      "name": "view", "type": "string", "enum": ["far", "near"],
+      "group": "帧侧", "unit": "枚举", "required": false, "recommended": true,
+      "producer": "具身侧", "consumer": "调度 / 面板",
+      "desc": "视角：far 远视角 / near 接近目标重拍（具身动作的结果）。"
+    },
+    {
+      "name": "confidence", "type": "float", "min": 0.0, "max": 1.0,
+      "group": "帧侧", "unit": "0–1", "required": true, "recommended": false,
+      "producer": "具身侧", "consumer": "调度 / 奖励",
+      "desc": "模型原始检测置信度（未校准）。"
+    },
+    {
+      "name": "confidence_calibrated", "type": "float", "min": 0.0, "max": 1.0, "nullable": true,
+      "group": "帧侧", "unit": "0–1", "required": false, "recommended": true,
+      "producer": "具身侧", "consumer": "调度 / 奖励",
+      "desc": "温度缩放后的置信度；未做校准前填 null（第 2–3 周上线）。调度阈值只用这个字段。"
+    },
+    {
+      "name": "image_quality", "type": "float", "min": 0.0, "max": 1.0,
+      "group": "帧侧", "unit": "0–1", "required": true, "recommended": false,
+      "producer": "具身侧", "consumer": "调度 / 奖励",
+      "desc": "轻量图像质量分：拉普拉斯方差（清晰度）与亮度归一化后的加权值，0 最差 1 最好。"
+    },
+    {
+      "name": "infer_time_ms", "type": "float", "min": 0.0,
+      "group": "帧侧", "unit": "毫秒", "required": true, "recommended": false,
+      "producer": "具身侧", "consumer": "瓶颈归因",
+      "desc": "本次推理耗时（perf_counter 计时），端侧与边缘侧各自记录。"
+    },
+    {
+      "name": "roi_ratio", "type": "float", "min": 0.0, "max": 1.0,
+      "group": "帧侧", "unit": "0–1", "required": true, "recommended": false,
+      "producer": "具身侧", "consumer": "裁剪决策",
+      "desc": "目标 ROI 面积占全帧比例；为 0 表示本帧没有目标。"
+    },
+    {
+      "name": "mode", "type": "string", "enum": ["device", "edge"],
+      "group": "帧侧", "unit": "枚举", "required": true, "recommended": false,
+      "producer": "具身侧", "consumer": "调度 / 归因",
+      "desc": "本帧实际推理位置：device 端侧（量化小模型）/ edge 边缘（完整模型）。"
+    },
+    {
+      "name": "resolution", "type": "string", "enum": ["1920x1080", "1280x720", "640x480", "320x240"],
+      "group": "帧侧", "unit": "枚举", "required": true, "recommended": false,
+      "producer": "具身侧", "consumer": "降级动作 / 面板",
+      "desc": "本帧实际使用的分辨率档。动作生效后，下一帧必须反映新档位。"
+    },
+    {
+      "name": "suggest_action", "type": "string", "nullable": true,
+      "enum": ["keep", "downscale", "lower_fps", "crop_roi", "switch_edge", "switch_device", "skip_upload"],
+      "group": "帧侧", "unit": "枚举或 null", "required": false, "recommended": false,
+      "producer": "具身侧", "consumer": "调度器参考",
+      "desc": "管线自己的建议（不含调度权重），供调度器参考；null 表示没有建议。"
+    },
+    {
+      "name": "link_rtt_ms", "type": "float", "min": 0.0,
+      "group": "链路侧", "unit": "毫秒", "required": true, "recommended": false,
+      "producer": "链路侧", "consumer": "调度 / 指标",
+      "desc": "本决策窗内的上行 RTT 估计（最近一个采样窗口的中位数）。"
+    },
+    {
+      "name": "link_jitter_ms", "type": "float", "min": 0.0,
+      "group": "链路侧", "unit": "毫秒", "required": false, "recommended": true,
+      "producer": "链路侧", "consumer": "调度 / 面板",
+      "desc": "RTT 抖动（同一窗口内的标准差或 P90−P10）。"
+    },
+    {
+      "name": "link_loss_rate", "type": "float", "min": 0.0, "max": 1.0,
+      "group": "链路侧", "unit": "0–1", "required": true, "recommended": false,
+      "producer": "链路侧", "consumer": "调度 / 指标",
+      "desc": "丢包率，小数不是百分数（0.02 = 2%）。"
+    },
+    {
+      "name": "link_thr_mbps", "type": "float", "min": 0.0,
+      "group": "链路侧", "unit": "Mbps", "required": false, "recommended": true,
+      "producer": "链路侧", "consumer": "调度 / 指标",
+      "desc": "上行可用吞吐估计。"
+    },
+    {
+      "name": "link_zone", "type": "string",
+      "enum": ["good", "occlusion", "crowd", "interference", "handover", "outage"],
+      "group": "链路侧", "unit": "枚举", "required": false, "recommended": true,
+      "producer": "链路侧", "consumer": "面板 / 归因",
+      "desc": "链路场景标记：良好 / 遮挡 / 人多 / 干扰 / 切换 / 中断。用于把时间线按场景切段。"
+    },
+    {
+      "name": "pred_p_degrade_1s", "type": "float", "min": 0.0, "max": 1.0, "nullable": true,
+      "group": "链路侧", "unit": "0–1", "required": false, "recommended": true,
+      "producer": "链路侧", "consumer": "调度器（前馈）",
+      "desc": "预测未来 1 s 内链路恶化（RTT 或丢包超阈值）的概率；预测器未上线时填 null。"
+    },
+    {
+      "name": "pred_rtt_p95_ms", "type": "float", "min": 0.0, "nullable": true,
+      "group": "链路侧", "unit": "毫秒", "required": false, "recommended": false,
+      "producer": "链路侧", "consumer": "调度器（前馈）",
+      "desc": "预测窗口内 RTT 的 P95；用于估算本次上传是否会超时。"
+    },
+    {
+      "name": "act_name", "type": "string",
+      "enum": ["keep", "downscale", "lower_fps", "crop_roi", "switch_edge", "switch_device", "skip_upload"],
+      "group": "调度侧", "unit": "枚举", "required": true, "recommended": false,
+      "producer": "调度器", "consumer": "执行器 / 面板",
+      "desc": "本决策时刻选中的动作，取值见 docs/action_contract.md。"
+    },
+    {
+      "name": "act_params", "type": "object",
+      "group": "调度侧", "unit": "对象", "required": true, "recommended": false,
+      "producer": "调度器", "consumer": "执行器",
+      "desc": "动作参数，如 {\"resolution\":\"320x240\"}；无参数时写 {}，不要省略。"
+    },
+    {
+      "name": "act_reason", "type": "string", "pattern": "^[A-Za-z0-9_,.>:=+-]{1,64}$",
+      "group": "调度侧", "unit": "ASCII 短串", "required": true, "recommended": false,
+      "producer": "调度器", "consumer": "面板 / 答辩",
+      "desc": "动作依据的机器可读标签（禁止中文长句），如 pred_degrade_0.62、conf_below_tau。"
+    },
+    {
+      "name": "exec_t_total_ms", "type": "float", "min": 0.0,
+      "group": "执行侧", "unit": "毫秒", "required": true, "recommended": false,
+      "producer": "执行器", "consumer": "指标 / 归因",
+      "desc": "端到端时延，必须等于 t_ms − t_frame_ms（校验脚本会比对，容差 1 ms）。"
+    },
+    {
+      "name": "exec_t_uplink_ms", "type": "float", "min": 0.0,
+      "group": "执行侧", "unit": "毫秒", "required": false, "recommended": true,
+      "producer": "执行器", "consumer": "瓶颈归因",
+      "desc": "其中上传段耗时；不上传时为 0。"
+    },
+    {
+      "name": "exec_bytes_up", "type": "int", "min": 0,
+      "group": "执行侧", "unit": "字节", "required": true, "recommended": false,
+      "producer": "执行器", "consumer": "流量指标 / 奖励",
+      "desc": "本帧实际上行字节数；缓存不上传时为 0。"
+    },
+    {
+      "name": "exec_retx", "type": "int", "min": 0,
+      "group": "执行侧", "unit": "次", "required": false, "recommended": true,
+      "producer": "执行器", "consumer": "归因（重传瓶颈）",
+      "desc": "本帧重传次数。"
+    },
+    {
+      "name": "exec_success", "type": "int", "enum": [0, 1],
+      "group": "执行侧", "unit": "0/1", "required": true, "recommended": false,
+      "producer": "执行器", "consumer": "任务成功率",
+      "desc": "本时刻是否推进了任务（目标被正确上报或状态被有效更新）。"
+    },
+    {
+      "name": "exec_switched", "type": "int", "enum": [0, 1],
+      "group": "执行侧", "unit": "0/1", "required": false, "recommended": true,
+      "producer": "执行器", "consumer": "切换频次指标",
+      "desc": "本时刻是否发生了动作切换（用于计算切换频次与控制策略抖动）。"
+    },
+    {
+      "name": "rw_total", "type": "float",
+      "group": "奖励侧", "unit": "无量纲", "required": true, "recommended": false,
+      "producer": "奖励模块", "consumer": "指标 / 对照实验",
+      "desc": "本时刻奖励总分 = 各分量之和（口径见 docs/log_contract.md §4.9）。"
+    },
+    {
+      "name": "rw_task", "type": "float",
+      "group": "奖励侧", "unit": "无量纲", "required": false, "recommended": true,
+      "producer": "奖励模块", "consumer": "面板 / 一致性分析",
+      "desc": "任务推进分量。"
+    },
+    {
+      "name": "rw_latency", "type": "float",
+      "group": "奖励侧", "unit": "无量纲", "required": false, "recommended": true,
+      "producer": "奖励模块", "consumer": "面板 / 一致性分析",
+      "desc": "时延惩罚分量（通常为负）。"
+    },
+    {
+      "name": "rw_bytes", "type": "float",
+      "group": "奖励侧", "unit": "无量纲", "required": false, "recommended": true,
+      "producer": "奖励模块", "consumer": "面板 / 一致性分析",
+      "desc": "上行流量惩罚分量（通常为负）。"
+    },
+    {
+      "name": "rw_conf_margin", "type": "float",
+      "group": "奖励侧", "unit": "无量纲", "required": false, "recommended": true,
+      "producer": "奖励模块", "consumer": "面板",
+      "desc": "置信度裕度分量（校准置信度高于阈值的部分）。"
+    },
+    {
+      "name": "rw_switch", "type": "float",
+      "group": "奖励侧", "unit": "无量纲", "required": false, "recommended": true,
+      "producer": "奖励模块", "consumer": "面板",
+      "desc": "切换代价分量（通常为负）。"
+    },
+    {
+      "name": "rw_lambda_lat", "type": "float", "min": 0.0,
+      "group": "奖励侧", "unit": "乘子", "required": false, "recommended": true,
+      "producer": "奖励模块", "consumer": "答辩证据",
+      "desc": "时延约束的拉格朗日乘子（对偶上升后的当前值），用于解释\"为什么此刻偏向低时延\"。"
+    },
+    {
+      "name": "why", "type": "string",
+      "group": "奖励侧", "unit": "中文短句", "required": false, "recommended": true,
+      "producer": "调度器", "consumer": "面板 / 答辩",
+      "desc": "一句话解释本次决策，面板直接显示；用于验收\"面板不是装饰\"。"
+    },
+    {
+      "name": "ep_success", "type": "int", "enum": [0, 1],
+      "group": "回合汇总", "unit": "0/1", "required": false, "recommended": true,
+      "producer": "实验脚本", "consumer": "任务成功率",
+      "desc": "只写在 episode_end：本回合全部目标是否在时限内完成。"
+    },
+    {
+      "name": "ep_reward_sum", "type": "float",
+      "group": "回合汇总", "unit": "无量纲", "required": false, "recommended": true,
+      "producer": "实验脚本", "consumer": "奖励-性能一致性",
+      "desc": "只写在 episode_end：回合奖励总和。"
+    },
+    {
+      "name": "ep_bytes_up", "type": "int", "min": 0,
+      "group": "回合汇总", "unit": "字节", "required": false, "recommended": true,
+      "producer": "实验脚本", "consumer": "流量指标",
+      "desc": "只写在 episode_end：本回合总上行字节。"
+    },
+    {
+      "name": "ep_p95_lat_ms", "type": "float", "min": 0.0,
+      "group": "回合汇总", "unit": "毫秒", "required": false, "recommended": true,
+      "producer": "实验脚本", "consumer": "时延指标",
+      "desc": "只写在 episode_end：本回合端到端时延 P95。"
+    },
+    {
+      "name": "ep_switches", "type": "int", "min": 0,
+      "group": "回合汇总", "unit": "次", "required": false, "recommended": true,
+      "producer": "实验脚本", "consumer": "切换频次指标",
+      "desc": "只写在 episode_end：本回合动作切换总次数。"
+    }
+  ],
+  "changelog": [
+    {"version": "0.1", "date": "2026-11-12", "note": "首版：通用/帧侧/链路侧/调度侧/执行侧/奖励侧/回合汇总 共 47 个字段；tick 必填 22 个。"}
+  ]
+}
+

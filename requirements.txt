@@ -1,0 +1,4 @@
+# 核心校验脚本零依赖（标准库即可），以下仅为可选增强：
+#   read_log.py 的 DataFrame 视图
+pandas>=2.0
+numpy>=1.24
