@@ -1,0 +1,21 @@
+name: contract-check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 文档表格 vs schema 一致性
+        run: python scripts/check_contract.py
+      - name: 样例日志校验（严格模式）
+        run: python scripts/validate_log.py logs/sample_frames.jsonl --strict --summary
+      - name: 读取脚本可用性
+        run: python scripts/read_log.py logs/sample_frames.jsonl --head 3

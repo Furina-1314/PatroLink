@@ -1,5 +1,31 @@
-﻿################################################################################
-# 此 .gitignore 文件已由 Microsoft(R) Visual Studio 自动创建。
-################################################################################
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
 
+# 编辑器 / 系统
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 实验产物（大文件不进 git）
+data/
+results/
+*.parquet
+*.onnx
+*.pt
+*.mp4
+*.avi
+*.pkl
+
+# 日志：只保留样例，其余不进 git
+logs/*.jsonl
+!logs/sample_frames.jsonl
+
+# ͬѧ�ֿ�ԭ�У�Visual Studio��
 /.vs
+.vs/
