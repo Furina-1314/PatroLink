@@ -9,12 +9,13 @@
 
 | 步骤 | 内容 | 状态 |
 |---|---|---|
-| **Step 1** | **共享日志字段表 + 动作契约（v0.1）** | ✅ 完成（本仓库当前内容） |
-| Step 2 | 视觉黑箱推理管线跑通，按契约吐日志 | ⬜ 下一步 |
+| **Step 1** | **共享日志字段表 + 动作契约（v0.1）** | ✅ 完成（PR #1） |
+| **Step 2a** | **ESP32-S3 链路探针：真实 WiFi 的 RTT / 丢包 / RSSI / 吞吐** | ✅ 代码就绪（固件已编译通过），等实机采数 |
+| Step 2b | 视觉黑箱推理管线跑通，按契约吐日志 | ⬜ 下一步 |
 | Step 3 | 置信度校准（温度缩放） | ⬜ |
-| Step 4 | 链路仿真与短时预测 | ⬜ |
-| Step 5 | 可观测面板（时间线 / 瓶颈归因 / 奖励曲线） | ⬜ |
-| Step 6 | 奖励塑形 + 自适应调度 + 对照实验 | ⬜ |
+| Step 4 | 链路预测器（监督学习：风险分级） | ⬜ |
+| Step 5 | 可观测面板（时间线 / 瓶颈归因 / 决策解释） | ⬜ |
+| Step 6 | 自适应调度 + 对照实验 | ⬜ |
 
 ---
 
@@ -39,18 +40,21 @@ python scripts/read_log.py logs/sample_frames.jsonl
 
 ```
 PatroLink/
+├─ firmware/esp32s3_probe/     # ★ ESP32-S3 探针固件（UDP 回显 + HTTP /rssi /sink /echo）
+├─ pc/probe_link.py            # ★ PC 侧探针：四时间戳算 RTT，出 CSV/JSON/PNG
+├─ tools/fake_esp32_probe.py   # 无硬件时模拟探针节点（UDP+HTTP）
 ├─ docs/
-│  ├─ log_contract.md        # ★ 共享时间线日志字段表（v0.1，主交付物）
-│  └─ action_contract.md     # 调度动作契约（7 个动作 + reason 标签）
-├─ schema/
-│  └─ timeline.fields.json   # 机器可读字段契约（校验脚本的唯一数据源）
-├─ logs/
-│  └─ sample_frames.jsonl    # 手写样例：1 回合 8 个 tick，含降级/未上传/切边
+│  ├─ log_contract.md          # 共享时间线日志字段表（v0.1，主交付物）
+│  ├─ action_contract.md       # 调度动作契约（7 个动作 + reason 标签）
+│  └─ probe_guide.md           # 探针烧录 / 测量 / 故障排查（按这个做 W1 验收）
+├─ schema/timeline.fields.json # 机器可读字段契约（校验脚本唯一数据源）
+├─ logs/sample_frames.jsonl    # 手写样例：1 回合 8 个 tick
 ├─ scripts/
-│  ├─ validate_log.py        # 按契约校验任意 timeline.jsonl
-│  ├─ read_log.py            # 读日志 → 摘要（pandas 可选）
-│  └─ check_contract.py      # 文档表格 vs schema 一致性检查
-├─ requirements.txt          # 只有 pandas（可选）
+│  ├─ validate_log.py          # 按契约校验任意 timeline.jsonl
+│  ├─ read_log.py              # 读日志 → 摘要（pandas 可选）
+│  └─ check_contract.py        # 文档表格 vs schema 一致性检查
+├─ traces/                     # 探针产物（CSV/JSON/PNG，不进 git）
+├─ requirements.txt            # pandas / matplotlib（可选）
 └─ .gitignore
 ```
 
@@ -73,7 +77,26 @@ PatroLink/
 
 ---
 
-## 下一步（Step 2：让视觉管线按契约吐日志）
+## 链路探针（Step 2a，W1 主线）
+
+```powershell
+# 1) 烧固件：改 firmware/esp32s3_probe/esp32s3_probe.ino 里的 SSID/密码，
+#    Arduino IDE 选 ESP32S3 Dev Module（USB CDC On Boot = Enabled）→ 串口看 IP
+# 2) 没有硬件也能先自测：
+python tools\fake_esp32_probe.py --pattern degrade        # 终端 A
+python pc\probe_link.py --host 127.0.0.1 --udp-port 9000 --http-port 8080 --duration 10 --label fake  # 终端 B
+# 3) 真实测量（IP 换成串口里看到的）：
+python pc\probe_link.py --host 192.168.137.2 --duration 30 --label desk
+```
+
+- 原理：UDP 四时间戳，`RTT = (t3−t0) − (t2−t1)`，**不需要两端对时**；
+- 产物：`traces/probe_<label>_<ts>.{csv,json,png}`（RTT / 丢包 / RSSI / 吞吐）；
+- **W1 验收**：三个位置（桌边 / 隔墙 / 楼道）的 RTT 中位数差 ≥ 10 ms 或 RSSI 差 ≥ 5 dBm；
+- 完整步骤与故障排查见 [`docs/probe_guide.md`](docs/probe_guide.md)。
+
+---
+
+## 下一步（Step 2b：视觉管线按契约吐日志）
 
 1. 手机拍 1 分钟巡检视频（走廊/实验室），按固定帧率抽帧；
 2. YOLOv8n 导出 ONNX，CPU 推理，每帧算 `confidence` / `image_quality` / `infer_time_ms` / `roi_ratio`；

@@ -1,4 +1,4 @@
-# Python
+# ---- Python ----
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -6,13 +6,15 @@ __pycache__/
 venv/
 .env
 
-# 编辑器 / 系统
+# ---- Editors / OS ----
 .idea/
 .vscode/
+/.vs
+.vs/
 .DS_Store
 Thumbs.db
 
-# 实验产物（大文件不进 git）
+# ---- Experiment artifacts (large, not in git) ----
 data/
 results/
 *.parquet
@@ -22,10 +24,19 @@ results/
 *.avi
 *.pkl
 
-# 日志：只保留样例，其余不进 git
+# ---- Logs: keep the hand-written sample only ----
 logs/*.jsonl
 !logs/sample_frames.jsonl
 
-# ͬѧ�ֿ�ԭ�У�Visual Studio��
-/.vs
-.vs/
+# ---- Link probe traces: keep the folder, ignore outputs ----
+traces/*.csv
+traces/*.json
+traces/*.png
+!traces/README.md
+
+# ---- Arduino build output ----
+firmware/**/build/
+*.bin
+*.elf
+*.map
+
