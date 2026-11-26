@@ -1,0 +1,99 @@
+{
+  "name": "PatroLink 链路数据集 · 默认计划",
+  "note": "明天照着跑；每条开始前会暂停等你按 Enter。inject 字段需要先手动开 Clumsy。",
+  "runs": [
+    {
+      "label": "good_desk",
+      "duration_s": 480,
+      "distance_m": 1,
+      "obstacle": "none",
+      "channel": 6,
+      "hotspot": "pc",
+      "note": "静止，桌边，板子别挡"
+    },
+    {
+      "label": "good_desk_2",
+      "duration_s": 480,
+      "distance_m": 1,
+      "obstacle": "none",
+      "channel": 6,
+      "hotspot": "pc",
+      "note": "同场景第二次，用于误报评估"
+    },
+    {
+      "label": "wall_5m",
+      "duration_s": 480,
+      "distance_m": 5,
+      "obstacle": "wall",
+      "channel": 6,
+      "hotspot": "pc",
+      "note": "隔一堵墙；板子与电脑之间不要有人走动"
+    },
+    {
+      "label": "wall_5m_2",
+      "duration_s": 480,
+      "distance_m": 5,
+      "obstacle": "wall",
+      "channel": 6,
+      "hotspot": "pc",
+      "note": "同场景第二次，注意保持位置一致"
+    },
+    {
+      "label": "person_3m",
+      "duration_s": 300,
+      "distance_m": 3,
+      "obstacle": "person",
+      "channel": 6,
+      "hotspot": "pc",
+      "note": "一名同学在板子与电脑之间来回走动"
+    },
+    {
+      "label": "far_corridor",
+      "duration_s": 300,
+      "distance_m": 15,
+      "obstacle": "wall+door",
+      "channel": 6,
+      "hotspot": "pc",
+      "note": "楼道尽头，关一扇门"
+    },
+    {
+      "label": "outage_far",
+      "duration_s": 300,
+      "distance_m": 20,
+      "obstacle": "wall",
+      "channel": 6,
+      "hotspot": "pc",
+      "note": "走到断连再走回来；记录断连大致时刻"
+    },
+    {
+      "label": "inject_delay",
+      "duration_s": 300,
+      "distance_m": 5,
+      "obstacle": "none",
+      "channel": 6,
+      "hotspot": "pc",
+      "note": "Clumsy 注入：150 ms 延迟 + 30 ms 抖动",
+      "inject": {
+        "tool": "Clumsy",
+        "delay_ms": 150,
+        "loss_pct": 0,
+        "jitter_ms": 30
+      }
+    },
+    {
+      "label": "inject_loss",
+      "duration_s": 300,
+      "distance_m": 5,
+      "obstacle": "none",
+      "channel": 6,
+      "hotspot": "pc",
+      "note": "Clumsy 注入：10% 丢包",
+      "inject": {
+        "tool": "Clumsy",
+        "delay_ms": 0,
+        "loss_pct": 10,
+        "jitter_ms": 0
+      }
+    }
+  ]
+}

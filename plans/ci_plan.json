@@ -1,0 +1,14 @@
+{
+  "name": "CI 冒烟计划（配合 tools/fake_esp32_probe.py）",
+  "runs": [
+    {
+      "label": "ci_a",
+      "duration_s": 3,
+      "distance_m": 1,
+      "obstacle": "none",
+      "channel": null,
+      "hotspot": "loopback",
+      "note": "CI smoke"
+    }
+  ]
+}

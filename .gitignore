@@ -1,5 +1,45 @@
-﻿################################################################################
-# 此 .gitignore 文件已由 Microsoft(R) Visual Studio 自动创建。
-################################################################################
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
 
+# ---- Editors / OS ----
+.idea/
+.vscode/
 /.vs
+.vs/
+.DS_Store
+Thumbs.db
+
+# ---- Experiment artifacts (large, not in git) ----
+data/
+results/
+*.parquet
+*.onnx
+*.pt
+*.mp4
+*.avi
+*.pkl
+
+# ---- Logs: keep the hand-written sample only ----
+logs/*.jsonl
+!logs/sample_frames.jsonl
+
+# ---- Link probe traces: keep the folder, ignore outputs ----
+traces/*.csv
+traces/*.json
+traces/*.png
+
+# ---- ML artifacts: dataset / model / figures are reproducible ----
+ml/artifacts/
+traces/demo/
+
+# ---- Arduino build output ----
+firmware/**/build/
+*.bin
+*.elf
+*.map
+

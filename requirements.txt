@@ -1,0 +1,12 @@
+# 核心校验脚本零依赖（标准库即可）；以下按需安装。
+# 读日志 DataFrame 视图：
+pandas>=2.0
+numpy>=1.24
+# 链路风险预测器（ml/train_predictor.py）：
+scikit-learn>=1.3
+joblib>=1.3
+# 画图（探针曲线 / ROC / 时间序列）：
+matplotlib>=3.6
+# 可视化面板（panel/app.py）：
+streamlit>=1.40
+plotly>=5.20
