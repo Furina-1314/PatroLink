@@ -42,6 +42,8 @@ python scripts/read_log.py logs/sample_frames.jsonl
 PatroLink/
 ├─ firmware/esp32s3_probe/     # ★ ESP32-S3 探针固件（UDP 回显 + HTTP /rssi /sink /echo）
 ├─ pc/probe_link.py            # ★ PC 侧探针：四时间戳算 RTT，出 CSV/JSON/PNG
+├─ pc/collect_dataset.py       # ★ 按计划逐条采集（自动记账到 traces/manifest.csv）
+├─ plans/collect_plan.json     # 采集计划：9 条（good/wall/person/far/outage/inject）
 ├─ ml/                         # ★ 链路风险预测器：造样本 → 训练 → 评估 → 出图
 │  ├─ make_demo_traces.py      # 合成演示 trace（没有真数据时先跑通流程）
 │  ├─ build_dataset.py         # 滑窗造特征 + 未来窗口标签
@@ -50,7 +52,8 @@ PatroLink/
 ├─ docs/
 │  ├─ log_contract.md          # 共享时间线日志字段表（v0.1，主交付物）
 │  ├─ action_contract.md       # 调度动作契约（7 个动作 + reason 标签）
-│  └─ probe_guide.md           # 探针烧录 / 测量 / 故障排查（按这个做 W1 验收）
+│  ├─ collect_playbook.md      # ★ 明天照着做：谁做什么、怎么设、怎么采、怎么观察
+│  ├─ probe_guide.md           # 探针烧录 / 测量 / 故障排查（按这个做 W1 验收）
 │  └─ dataset_protocol.md      # 数据从哪来：实测为主 / 可控注入扩增 / 仿真只测代码
 ├─ schema/timeline.fields.json # 机器可读字段契约（校验脚本唯一数据源）
 ├─ logs/sample_frames.jsonl    # 手写样例：1 回合 8 个 tick

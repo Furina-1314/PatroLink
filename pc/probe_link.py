@@ -56,8 +56,12 @@ def pct(values, q):
     return s[lo] + (s[hi] - s[lo]) * (k - lo)
 
 
-def probe_udp(host: str, port: int, hz: float, duration: float, timeout: float):
-    """返回逐包记录列表。"""
+def probe_udp(host: str, port: int, hz: float, duration: float, timeout: float,
+              progress=None, progress_every: float = 5.0):
+    """返回逐包记录列表。
+
+    progress: 可选回调 f(records)，每 progress_every 秒调用一次，用于实时观察。
+    """
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(timeout)
     try:
@@ -70,6 +74,7 @@ def probe_udp(host: str, port: int, hz: float, duration: float, timeout: float):
     seq = 0
     t_end = time.monotonic() + duration
     t_next = time.monotonic()
+    last_report = time.monotonic()
     while time.monotonic() < t_end:
         seq += 1
         t0 = now_us()
@@ -88,6 +93,9 @@ def probe_udp(host: str, port: int, hz: float, duration: float, timeout: float):
             pass
         records.append(dict(wall_ms=wall, seq=seq, rtt_ms=rtt_ms, rssi_dbm=rssi,
                             lost=1 if rtt_ms is None else 0))
+        if progress is not None and time.monotonic() - last_report >= progress_every:
+            progress(records)
+            last_report = time.monotonic()
         t_next += interval
         sleep = t_next - time.monotonic()
         if sleep > 0:
@@ -225,6 +233,8 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default="traces", help="输出目录")
     ap.add_argument("--sink-kb", type=int, default=0, help="额外测上行吞吐：POST N KB")
     ap.add_argument("--echo-kb", type=int, default=0, help="额外测下行吞吐：GET N KB")
+    ap.add_argument("--progress", type=float, default=5.0,
+                    help="实时打印进度的间隔（秒），0 表示关闭")
     ap.add_argument("--no-plot", action="store_true")
     args = ap.parse_args(argv)
 
@@ -236,7 +246,21 @@ def main(argv=None) -> int:
     print(f"探针 → {args.host}:{args.udp_port}  {args.hz:g} Hz × {args.duration:g} s  label={args.label}")
     print(f"  元数据：distance={args.distance_m} m obstacle={args.obstacle} "
           f"channel={args.channel} hotspot={args.hotspot}")
-    records = probe_udp(args.host, args.udp_port, args.hz, args.duration, args.timeout)
+
+    def _progress(recs):
+        got = [r for r in recs if not r["lost"]]
+        rtts = [r["rtt_ms"] for r in got]
+        rssis = [r["rssi_dbm"] for r in got if r["rssi_dbm"] is not None]
+        elapsed = (recs[-1]["wall_ms"] - recs[0]["wall_ms"]) / 1000.0
+        med = pct(rtts, 0.5) if rtts else float("nan")
+        rs = pct(rssis, 0.5) if rssis else float("nan")
+        print(f"  [{elapsed:6.0f}s] 收 {len(got)}/{len(recs)} "
+              f"丢 {1 - len(got) / max(1, len(recs)):5.1%} ｜ "
+              f"RTT 中位 {med:6.1f} ms ｜ RSSI {rs:5.0f} dBm")
+
+    records = probe_udp(args.host, args.udp_port, args.hz, args.duration, args.timeout,
+                        progress=_progress if args.progress > 0 else None,
+                        progress_every=args.progress if args.progress > 0 else 5.0)
     s = summarize(records)
 
     print("\n──── 结果 ────")
