@@ -63,8 +63,9 @@ def stats(x: np.ndarray):
     )
 
 
-def build_trace(trace, window_s: float, horizon_s: float, step_s: float,
-                rtt_thresh: float, loss_thresh: float):
+def compute_rows(trace, window_s: float, horizon_s: float, step_s: float,
+                 rtt_thresh: float, loss_thresh: float):
+    """对一条 trace 计算所有滑窗样本（面板也复用这个函数，保证口径一致）。"""
     t, rtt, rssi, lost = trace["t"], trace["rtt"], trace["rssi"], trace["lost"]
     if len(t) < 10:
         return []
@@ -128,7 +129,7 @@ def main(argv=None) -> int:
     all_rows = []
     for p in files:
         tr = load_trace(p)
-        rows = build_trace(tr, args.window, args.horizon, args.step,
+        rows = compute_rows(tr, args.window, args.horizon, args.step,
                            args.rtt_thresh, args.loss_thresh)
         pos = sum(r["label"] for r in rows)
         print(f"  {p.name}: {len(rows)} 样本，正例 {pos} ({pos / max(1, len(rows)):.1%})")
@@ -149,6 +150,10 @@ def main(argv=None) -> int:
     if total_pos == 0:
         print("⚠️ 没有正例：把 --rtt-thresh 调低，或让 trace 里包含恶化区间", file=sys.stderr)
     return 0
+
+
+# 兼容旧名字（外部脚本可能还在用）
+build_trace = compute_rows
 
 
 if __name__ == "__main__":

@@ -183,6 +183,9 @@ def main(argv=None) -> int:
     ap.add_argument("--split", choices=["time", "trace"], default="time")
     ap.add_argument("--train-frac", type=float, default=0.7, help="time 划分时训练集占比")
     ap.add_argument("--gap", type=float, default=1.2, help="time 划分时训练/测试之间的隔离秒数")
+    ap.add_argument("--window", type=float, default=2.0, help="与 build_dataset 一致：特征窗口")
+    ap.add_argument("--horizon", type=float, default=1.0, help="与 build_dataset 一致：预测窗口")
+    ap.add_argument("--step", type=float, default=0.2, help="与 build_dataset 一致：滑窗步长")
     ap.add_argument("--rtt-thresh", type=float, default=80.0, help="与 build_dataset 保持一致")
     ap.add_argument("--loss-thresh", type=float, default=0.03)
     ap.add_argument("--out", default="ml/artifacts")
@@ -278,6 +281,8 @@ def main(argv=None) -> int:
             if mname == "hgb":
                 import joblib
                 joblib.dump({"model": model, "features": FEATURES,
+                             "window_s": args.window, "horizon_s": args.horizon,
+                             "step_s": args.step,
                              "impute_median": med_impute, "rtt_thresh": args.rtt_thresh,
                              "loss_thresh": args.loss_thresh, "threshold": th},
                             out / "model.joblib")

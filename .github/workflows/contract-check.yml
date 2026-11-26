@@ -20,7 +20,7 @@ jobs:
       - name: 读取脚本可用性
         run: python scripts/read_log.py logs/sample_frames.jsonl --head 3
       - name: Python 脚本语法检查
-        run: python -m py_compile pc/probe_link.py pc/collect_dataset.py tools/fake_esp32_probe.py ml/make_demo_traces.py ml/build_dataset.py ml/train_predictor.py scripts/validate_log.py scripts/read_log.py scripts/check_contract.py
+        run: python -m py_compile pc/probe_link.py pc/collect_dataset.py tools/fake_esp32_probe.py tools/panel_smoke.py ml/make_demo_traces.py ml/build_dataset.py ml/train_predictor.py panel/app.py scripts/validate_log.py scripts/read_log.py scripts/check_contract.py
       - name: 探针 ↔ 假节点 自测（本机回环，5 秒）
         run: |
           python tools/fake_esp32_probe.py --pattern good --ramp-s 2 &
@@ -34,6 +34,10 @@ jobs:
           python pc/collect_dataset.py --plan plans/ci_plan.json --host 127.0.0.1 --udp-port 9000 --http-port 8080 --yes --no-plot --out /tmp/collect
           test -s /tmp/collect/manifest.csv
           head -2 /tmp/collect/manifest.csv
+      - name: 面板冒烟（Streamlit AppTest，无需浏览器）
+        run: |
+          pip install --quiet streamlit plotly
+          python tools/panel_smoke.py
       - name: ML 冒烟（合成数据：造数据 → 造样本 → 训练，不出图）
         run: |
           pip install --quiet scikit-learn joblib

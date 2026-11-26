@@ -14,7 +14,7 @@
 | Step 2b | 视觉黑箱推理管线跑通，按契约吐日志 | ⬜ 下一步 |
 | Step 3 | 置信度校准（温度缩放） | ⬜ |
 | **Step 4** | **链路风险预测器（监督学习：过去 2 s → 未来 1 s 是否恶化）** | ✅ 代码就绪（合成数据验证），等实测 trace |
-| Step 5 | 可观测面板（时间线 / 瓶颈归因 / 决策解释） | ⬜ |
+| **Step 5** | **可视化面板 v0.5：采集回放 / 模型评估 / 数据总览** | ✅ 就绪（链路+预测），待接时间线日志 |
 | Step 6 | 自适应调度 + 对照实验 | ⬜ |
 
 ---
@@ -48,11 +48,14 @@ PatroLink/
 │  ├─ make_demo_traces.py      # 合成演示 trace（没有真数据时先跑通流程）
 │  ├─ build_dataset.py         # 滑窗造特征 + 未来窗口标签
 │  └─ train_predictor.py       # 基线 / 逻辑回归 / 梯度提升 + ROC/PR/时间序列图
+├─ panel/app.py                # ★ Streamlit 面板：采集回放 / 模型评估 / 数据总览
 ├─ tools/fake_esp32_probe.py   # 无硬件时模拟探针节点（UDP+HTTP）
+├─ tools/panel_smoke.py        # 面板冒烟测试（AppTest，无需浏览器）
 ├─ docs/
 │  ├─ log_contract.md          # 共享时间线日志字段表（v0.1，主交付物）
 │  ├─ action_contract.md       # 调度动作契约（7 个动作 + reason 标签）
 │  ├─ collect_playbook.md      # ★ 明天照着做：谁做什么、怎么设、怎么采、怎么观察
+│  ├─ panel_guide.md           # 面板怎么启动、每个页签看什么、演示怎么说
 │  ├─ probe_guide.md           # 探针烧录 / 测量 / 故障排查（按这个做 W1 验收）
 │  └─ dataset_protocol.md      # 数据从哪来：实测为主 / 可控注入扩增 / 仿真只测代码
 ├─ schema/timeline.fields.json # 机器可读字段契约（校验脚本唯一数据源）
@@ -119,6 +122,22 @@ python ml\train_predictor.py --data ml\artifacts\dataset.csv --split trace --out
 - 产物：`metrics.json`、`model.joblib`、ROC/PR 图、**预测概率 vs 真实恶化**时间序列图；
 - 完整方法、结果与踩坑清单见 [`docs/predictor_guide.md`](docs/predictor_guide.md)。
 - **数据从哪来**：实测为主、可控注入扩增、仿真只测代码——见 [`docs/dataset_protocol.md`](docs/dataset_protocol.md)（含 12 条 trace 的采集矩阵与元数据字段）。
+
+---
+
+## 可视化面板（Step 5）
+
+```powershell
+pip install -r requirements.txt
+streamlit run panel\app.py        # 打开 http://localhost:8501
+python tools\panel_smoke.py       # 无浏览器冒烟测试
+```
+
+- **采集回放**：RTT/RSSI/丢包曲线 + 真实恶化区间 + 模型预测概率 + 提前量；
+- **模型评估**：模型 vs 基线（AUC/F1/Recall）、静默 trace 误报率、ROC/PR、预测-真值时间序列；
+- **数据总览**：manifest 记账表、场景覆盖、数据规模；
+- 没有真实数据时自动用 `traces/demo/` 的合成数据并显式提示。
+- 详见 [`docs/panel_guide.md`](docs/panel_guide.md)。
 
 ---
 
