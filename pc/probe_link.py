@@ -212,7 +212,16 @@ def main(argv=None) -> int:
     ap.add_argument("--hz", type=float, default=20.0, help="探针频率（默认 20 Hz）")
     ap.add_argument("--duration", type=float, default=30.0, help="测量时长（秒）")
     ap.add_argument("--timeout", type=float, default=0.2, help="单包等待（秒）")
-    ap.add_argument("--label", default="unlabeled", help="位置标签，如 desk/wall/corridor")
+    ap.add_argument("--label", default="unlabeled",
+                    help="场景标签，如 good_desk / occlude_wall / crowd_corridor / outage_far")
+    # ---- 数据集元数据（不进 CSV，只写 JSON；用于复现与后续特征分析）----
+    ap.add_argument("--distance-m", type=float, default=None, help="收发距离（米）")
+    ap.add_argument("--obstacle", default="none",
+                    help="遮挡物：none / wall / door / pillar / person / floor")
+    ap.add_argument("--channel", type=int, default=None, help="WiFi 信道")
+    ap.add_argument("--device", default="esp32s3", help="探针设备")
+    ap.add_argument("--hotspot", default="pc", help="热点来源：pc / phone / router")
+    ap.add_argument("--note", default="", help="备注（走动方式、环境等）")
     ap.add_argument("--out", default="traces", help="输出目录")
     ap.add_argument("--sink-kb", type=int, default=0, help="额外测上行吞吐：POST N KB")
     ap.add_argument("--echo-kb", type=int, default=0, help="额外测下行吞吐：GET N KB")
@@ -225,6 +234,8 @@ def main(argv=None) -> int:
         pass
 
     print(f"探针 → {args.host}:{args.udp_port}  {args.hz:g} Hz × {args.duration:g} s  label={args.label}")
+    print(f"  元数据：distance={args.distance_m} m obstacle={args.obstacle} "
+          f"channel={args.channel} hotspot={args.hotspot}")
     records = probe_udp(args.host, args.udp_port, args.hz, args.duration, args.timeout)
     s = summarize(records)
 
@@ -261,9 +272,20 @@ def main(argv=None) -> int:
     csv_path = out / f"probe_{stamp}.csv"
     json_path = out / f"probe_{stamp}.json"
     save_csv(csv_path, records)
-    meta = {"host": args.host, "label": args.label, "hz": args.hz,
-            "duration_s": args.duration, "started_at": datetime.now().isoformat(timespec="seconds"),
-            "summary": s}
+    meta = {
+        "host": args.host, "label": args.label, "hz": args.hz,
+        "duration_s": args.duration,
+        "started_at": datetime.now().isoformat(timespec="seconds"),
+        "dataset": {
+            "distance_m": args.distance_m,
+            "obstacle": args.obstacle,
+            "channel": args.channel,
+            "device": args.device,
+            "hotspot": args.hotspot,
+            "note": args.note,
+        },
+        "summary": s,
+    }
     json_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n  已保存：{csv_path}")
     print(f"          {json_path}")

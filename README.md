@@ -51,6 +51,7 @@ PatroLink/
 │  ├─ log_contract.md          # 共享时间线日志字段表（v0.1，主交付物）
 │  ├─ action_contract.md       # 调度动作契约（7 个动作 + reason 标签）
 │  └─ probe_guide.md           # 探针烧录 / 测量 / 故障排查（按这个做 W1 验收）
+│  └─ dataset_protocol.md      # 数据从哪来：实测为主 / 可控注入扩增 / 仿真只测代码
 ├─ schema/timeline.fields.json # 机器可读字段契约（校验脚本唯一数据源）
 ├─ logs/sample_frames.jsonl    # 手写样例：1 回合 8 个 tick
 ├─ scripts/
@@ -114,6 +115,7 @@ python ml\train_predictor.py --data ml\artifacts\dataset.csv --split trace --out
 - 划分：`--split time`（同场景往后）与 `--split trace`（留一条 trace 不训练，测跨场景）；
 - 产物：`metrics.json`、`model.joblib`、ROC/PR 图、**预测概率 vs 真实恶化**时间序列图；
 - 完整方法、结果与踩坑清单见 [`docs/predictor_guide.md`](docs/predictor_guide.md)。
+- **数据从哪来**：实测为主、可控注入扩增、仿真只测代码——见 [`docs/dataset_protocol.md`](docs/dataset_protocol.md)（含 12 条 trace 的采集矩阵与元数据字段）。
 
 ---
 
