@@ -1,0 +1,12 @@
+# 统一换行，避免 Windows/macOS 互相提交时整文件 diff
+* text=auto
+*.py text
+*.md text
+*.json text
+*.jsonl text
+*.yml text
+*.png binary
+*.jpg binary
+*.onnx binary
+*.parquet binary
+*.mp4 binary
