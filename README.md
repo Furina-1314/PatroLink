@@ -56,6 +56,7 @@ PatroLink/
 │  ├─ action_contract.md       # 调度动作契约（7 个动作 + reason 标签）
 │  ├─ collect_playbook.md      # ★ 明天照着做：谁做什么、怎么设、怎么采、怎么观察
 │  ├─ panel_guide.md           # 面板怎么启动、每个页签看什么、演示怎么说
+│  └─ defense.md               # 答辩口径：创新点、卖点对照、8 个必问 Q&A
 │  ├─ probe_guide.md           # 探针烧录 / 测量 / 故障排查（按这个做 W1 验收）
 │  └─ dataset_protocol.md      # 数据从哪来：实测为主 / 可控注入扩增 / 仿真只测代码
 ├─ schema/timeline.fields.json # 机器可读字段契约（校验脚本唯一数据源）
