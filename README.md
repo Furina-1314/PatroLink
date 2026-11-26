@@ -13,7 +13,7 @@
 | **Step 2a** | **ESP32-S3 链路探针：真实 WiFi 的 RTT / 丢包 / RSSI / 吞吐** | ✅ 代码就绪（固件已编译通过），等实机采数 |
 | Step 2b | 视觉黑箱推理管线跑通，按契约吐日志 | ⬜ 下一步 |
 | Step 3 | 置信度校准（温度缩放） | ⬜ |
-| Step 4 | 链路预测器（监督学习：风险分级） | ⬜ |
+| **Step 4** | **链路风险预测器（监督学习：过去 2 s → 未来 1 s 是否恶化）** | ✅ 代码就绪（合成数据验证），等实测 trace |
 | Step 5 | 可观测面板（时间线 / 瓶颈归因 / 决策解释） | ⬜ |
 | Step 6 | 自适应调度 + 对照实验 | ⬜ |
 
@@ -42,6 +42,10 @@ python scripts/read_log.py logs/sample_frames.jsonl
 PatroLink/
 ├─ firmware/esp32s3_probe/     # ★ ESP32-S3 探针固件（UDP 回显 + HTTP /rssi /sink /echo）
 ├─ pc/probe_link.py            # ★ PC 侧探针：四时间戳算 RTT，出 CSV/JSON/PNG
+├─ ml/                         # ★ 链路风险预测器：造样本 → 训练 → 评估 → 出图
+│  ├─ make_demo_traces.py      # 合成演示 trace（没有真数据时先跑通流程）
+│  ├─ build_dataset.py         # 滑窗造特征 + 未来窗口标签
+│  └─ train_predictor.py       # 基线 / 逻辑回归 / 梯度提升 + ROC/PR/时间序列图
 ├─ tools/fake_esp32_probe.py   # 无硬件时模拟探针节点（UDP+HTTP）
 ├─ docs/
 │  ├─ log_contract.md          # 共享时间线日志字段表（v0.1，主交付物）
@@ -93,6 +97,23 @@ python pc\probe_link.py --host 192.168.137.2 --duration 30 --label desk
 - 产物：`traces/probe_<label>_<ts>.{csv,json,png}`（RTT / 丢包 / RSSI / 吞吐）；
 - **W1 验收**：三个位置（桌边 / 隔墙 / 楼道）的 RTT 中位数差 ≥ 10 ms 或 RSSI 差 ≥ 5 dBm；
 - 完整步骤与故障排查见 [`docs/probe_guide.md`](docs/probe_guide.md)。
+
+---
+
+## 链路风险预测器（Step 4）
+
+```powershell
+pip install -r requirements.txt          # scikit-learn / joblib / matplotlib
+python ml\make_demo_traces.py            # 合成演示数据（真实数据用探针采，见 docs/probe_guide.md）
+python ml\build_dataset.py --traces "traces/demo/*.csv"
+python ml\train_predictor.py --data ml\artifacts\dataset.csv --split trace --out ml\artifacts\trace
+```
+
+- 标签：未来 1 s 内 RTT P95 ≥ 80 ms 或丢包 ≥ 3% → 恶化；特征只用过去 2 s（13 维）；
+- 基线：`persistence`（已经坏了才说坏）、`rule`（人工阈值），**必须先打败它们**；
+- 划分：`--split time`（同场景往后）与 `--split trace`（留一条 trace 不训练，测跨场景）；
+- 产物：`metrics.json`、`model.joblib`、ROC/PR 图、**预测概率 vs 真实恶化**时间序列图；
+- 完整方法、结果与踩坑清单见 [`docs/predictor_guide.md`](docs/predictor_guide.md)。
 
 ---
 

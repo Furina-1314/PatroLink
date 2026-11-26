@@ -34,6 +34,10 @@ traces/*.json
 traces/*.png
 !traces/README.md
 
+# ---- ML artifacts: dataset / model / figures are reproducible ----
+ml/artifacts/
+traces/demo/
+
 # ---- Arduino build output ----
 firmware/**/build/
 *.bin
