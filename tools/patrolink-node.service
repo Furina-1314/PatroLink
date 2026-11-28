@@ -1,0 +1,23 @@
+# Optional: start the PatroLink board node automatically when the board boots.
+# Not installed by default. To use it on the board:
+#     cp /home/root/patrolink/patrolink-node.service /etc/systemd/system/
+#     systemctl enable --now patrolink-node.service
+# The node listens on all interfaces, so it may come up before Wi-Fi associates; that is fine.
+# If you use this, start and stop it with systemctl (not with start.sh / stop.sh).
+
+[Unit]
+Description=PatroLink board node (link probe and simulated video stream)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=/home/root/patrolink
+ExecStart=/usr/bin/python3 /home/root/patrolink/board_node.py --out /home/root/patrolink/log
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

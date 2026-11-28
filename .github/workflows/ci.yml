@@ -20,7 +20,7 @@ jobs:
       - name: 读取脚本可用性
         run: python scripts/read_log.py logs/sample_frames.jsonl --head 3
       - name: Python 脚本语法检查
-        run: python -m py_compile pc/probe_link.py pc/collect_dataset.py tools/fake_esp32_probe.py tools/panel_smoke.py ml/make_demo_traces.py ml/build_dataset.py ml/train_predictor.py panel/app.py scripts/validate_log.py scripts/read_log.py scripts/check_contract.py
+        run: python -m py_compile pc/probe_link.py pc/collect_dataset.py tools/fake_esp32_probe.py tools/panel_smoke.py tools/board_node.py tools/pc_collect.py ml/make_demo_traces.py ml/build_dataset.py ml/train_predictor.py panel/app.py scripts/validate_log.py scripts/read_log.py scripts/check_contract.py
       - name: 探针 ↔ 假节点 自测（本机回环，5 秒）
         run: |
           python tools/fake_esp32_probe.py --pattern good --ramp-s 2 &
@@ -34,6 +34,14 @@ jobs:
           python pc/collect_dataset.py --plan plans/ci_plan.json --host 127.0.0.1 --udp-port 9000 --http-port 8080 --yes --no-plot --out /tmp/collect
           test -s /tmp/collect/manifest.csv
           head -2 /tmp/collect/manifest.csv
+      - name: 板端节点 ↔ 采集器自测（本机回环，3 秒带载；用 9100-9102 端口，不与上面的假节点冲突）
+        run: |
+          mkdir -p /tmp/board
+          python tools/board_node.py --bind 127.0.0.1 --probe-port 9100 --ctrl-port 9102 --out /tmp/board > /tmp/board/node.log 2>&1 &
+          sleep 1
+          python tools/pc_collect.py run --board 127.0.0.1 --probe-port 9100 --ctrl-port 9102 --sink-port 9101 --sink-bind 127.0.0.1 --duration 3 --label ci --load 2mbps --out /tmp/board/out
+          test -s /tmp/board/out/manifest.csv
+          python -c "import csv; r = list(csv.DictReader(open('/tmp/board/out/manifest.csv')))[-1]; assert int(r['sent']) >= 50 and float(r['loss_rate']) < 0.05, r"
       - name: 面板冒烟（Streamlit AppTest，无需浏览器）
         run: |
           pip install --quiet streamlit plotly
